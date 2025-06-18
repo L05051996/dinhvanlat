@@ -1,13 +1,13 @@
 import zipfile
 import os
 
-# Tạo thư mục chứa mã nguồn
-project_dir = "/mnt/data/AIVT_App_V9"
+# Tạo lại thư mục chứa mã nguồn (do trạng thái kernel đã reset)
+project_dir = "/mnt/data/AIVT_v9_Termux"
 os.makedirs(project_dir, exist_ok=True)
 
-# Mã nguồn chính để chạy Blockchain AIVT dưới dạng ứng dụng console
-main_script = """
-import hashlib, time, json
+# Mã nguồn Python AIVT v9 nâng cấp
+python_code = '''
+import hashlib, time, json, os
 
 class Block:
     def __init__(self, index, timestamp, data, previous_hash):
@@ -18,98 +18,67 @@ class Block:
         self.hash = self.calculate_hash()
 
     def calculate_hash(self):
-        value = str(self.index) + str(self.timestamp) + str(self.data) + str(self.previous_hash)
+        value = f"{self.index}{self.timestamp}{self.data}{self.previous_hash}"
         return hashlib.sha256(value.encode()).hexdigest()
 
 class Blockchain:
-    def __init__(self):
-        self.chain = [self.create_genesis_block()]
+    def __init__(self, chain_file="aivt_chain.json"):
+        self.chain_file = chain_file
+        self.chain = self.load_chain() if os.path.exists(chain_file) else [self.create_genesis_block()]
+        self.save_chain()
 
     def create_genesis_block(self):
-        return Block(0, time.time(), "🚀 Genesis AIVT v9", "0")
+        return Block(0, time.time(), "🚀 Genesis Block AIVT v9", "0")
 
     def add_block(self, data):
-        previous = self.chain[-1]
-        new_block = Block(len(self.chain), time.time(), data, previous.hash)
+        last = self.chain[-1]
+        new_block = Block(len(self.chain), time.time(), data, last.hash)
         self.chain.append(new_block)
+        self.save_chain()
 
     def is_valid(self):
         for i in range(1, len(self.chain)):
-            curr = self.chain[i]
-            prev = self.chain[i - 1]
-            if curr.hash != curr.calculate_hash():
+            if self.chain[i].hash != self.chain[i].calculate_hash():
                 return False
-            if curr.previous_hash != prev.hash:
+            if self.chain[i].previous_hash != self.chain[i - 1].hash:
                 return False
         return True
 
-    def export_chain(self):
-        return json.dumps([block.__dict__ for block in self.chain], indent=2, ensure_ascii=False)
+    def save_chain(self):
+        with open(self.chain_file, "w", encoding="utf-8") as f:
+            json.dump([b.__dict__ for b in self.chain], f, indent=2, ensure_ascii=False)
 
-    def save_to_file(self, filename="aivt_chain.json"):
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(self.export_chain())
+    def load_chain(self):
+        with open(self.chain_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            chain = []
+            for block in data:
+                blk = Block(block["index"], block["timestamp"], block["data"], block["previous_hash"])
+                blk.hash = block["hash"]
+                chain.append(blk)
+            return chain
 
-def run_app():
-    chain = Blockchain()
-    print("✅ Khởi động AIVT Blockchain v9")
-    while True:
-        print("\\nMenu:")
-        print("1. Thêm khối mới")
-        print("2. Xuất chuỗi")
-        print("3. Kiểm tra chuỗi")
-        print("4. Lưu vào file")
-        print("0. Thoát")
-        choice = input("Lựa chọn: ")
-        if choice == "1":
-            data = input("Nhập dữ liệu khối: ")
-            chain.add_block(data)
-            print("✅ Đã thêm khối")
-        elif choice == "2":
-            print("📦 Chuỗi khối AIVT:")
-            print(chain.export_chain())
-        elif choice == "3":
-            print("✅ Chuỗi hợp lệ:", chain.is_valid())
-        elif choice == "4":
-            chain.save_to_file()
-            print("💾 Đã lưu vào aivt_chain.json")
-        elif choice == "0":
-            break
-        else:
-            print("❌ Lựa chọn không hợp lệ")
+    def print_chain(self):
+        print(json.dumps([b.__dict__ for b in self.chain], indent=2, ensure_ascii=False))
 
-if __name__ == "__main__":
-    run_app()
-"""
+# Khởi tạo
+aivt = Blockchain()
+aivt.add_block("✅ Khối 1: Tri thức")
+aivt.add_block("🧠 Khối 2: Tự học")
+aivt.add_block("⚙️ Khối 3: Tự nâng cấp")
+aivt.add_block("🌍 Khối 4: Đồng bộ toàn cầu")
+aivt.add_block("🔐 Khối 5: Bảo vệ lượng tử")
+aivt.print_chain()
+print("Chuỗi hợp lệ:", aivt.is_valid())
+'''
 
-# Lưu file script
-script_path = os.path.join(project_dir, "aivt_blockchain_app.py")
-with open(script_path, "w", encoding="utf-8") as f:
-    f.write(main_script)
+# Ghi vào file
+file_path = os.path.join(project_dir, "AIVT_v9.py")
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(python_code)
 
-# Tạo file README
-readme = """
-# AIVT Blockchain v9 App (Console)
-
-✅ Chạy trên Android qua Pydroid 3 hoặc Termux
-
-## Cách chạy trên Android:
-1. Tải Pydroid 3 từ Play Store.
-2. Mở Pydroid 3 -> Open file `aivt_blockchain_app.py`
-3. Bấm Run ▶️ để sử dụng.
-
-Tính năng:
-- Thêm khối mới với dữ liệu tùy ý
-- Kiểm tra chuỗi hợp lệ
-- Xuất chuỗi JSON
-- Lưu vào file aivt_chain.json
-"""
-readme_path = os.path.join(project_dir, "README.txt")
-with open(readme_path, "w", encoding="utf-8") as f:
-    f.write(readme)
-
-# Đóng gói zip
-zip_path = "/mnt/data/AIVT_Blockchain_App.zip"
+# Đóng gói thành file zip
+zip_path = "/mnt/data/AIVT_v9_Termux.zip"
 with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
     for root, dirs, files in os.walk(project_dir):
         for file in files:
